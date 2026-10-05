@@ -21,7 +21,7 @@ import os
 import subprocess
 import sys
 import warnings
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -89,6 +89,26 @@ def _pin_local_eval_concurrency() -> None:
     this only applies to local runs, and only if the caller hasn't already
     set an explicit value."""
     os.environ.setdefault("MLFLOW_GENAI_EVAL_MAX_WORKERS", "1")
+
+
+def ensure_warehouse_running(warehouse_id: Optional[str], timeout_s: int = 600) -> None:
+    """Start the SQL warehouse and wait for it before evaluating. Databricks-run traces are
+    read back through it, so a cold start mid-eval makes every scorer hit its 300s timeout."""
+    if not warehouse_id:
+        return
+    try:
+        from databricks.sdk import WorkspaceClient
+        from databricks.sdk.service.sql import State
+
+        w = WorkspaceClient()
+        state = w.warehouses.get(warehouse_id).state
+        if state == State.RUNNING:
+            return
+        print(f"SQL warehouse {warehouse_id} is {state.value if state else 'UNKNOWN'}; starting it (up to {timeout_s}s)...")
+        w.warehouses.start_and_wait(warehouse_id, timeout=timedelta(seconds=timeout_s))
+        print("SQL warehouse is RUNNING.")
+    except Exception as e:  # best effort; MLflow also auto-starts it
+        warnings.warn(f"Could not verify/start SQL warehouse {warehouse_id}: {e}")
 
 
 def configure_mlflow(run_source: str, agent_name: str) -> None:
@@ -283,6 +303,8 @@ def run(
 ) -> dict[str, Any]:
     agent_cfg = settings.agent(agent_name)
     run_tags = {"run_type": "dry_run" if dry_run else "scheduled", **(tags or {})}
+    if run_source == "databricks":
+        ensure_warehouse_running(warehouse_id or os.environ.get("DATABRICKS_SQL_WAREHOUSE_ID"))
     configure_mlflow(run_source, agent_name)
 
     if dataset_source == "local":
