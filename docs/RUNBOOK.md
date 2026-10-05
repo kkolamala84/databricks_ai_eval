@@ -28,7 +28,7 @@ pip install -r requirements.txt
 ## 2. Configure secrets
 
 ```bash
-cp .env.template.example .env   # or .env.example for the short version
+cp .env.template.example .env
 ```
 
 Edit `.env` and fill in at minimum:
