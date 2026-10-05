@@ -112,16 +112,16 @@ Clean up with `eval.cleanup_runs` (preview by default; add `--yes` to delete):
 ```bash
 # delete only dry runs (MLflow runs; add --uc for the Unity Catalog rows)
 python -m eval.cleanup_runs --agent vacation_planner_agent --run-source local --dry-runs-only --yes
-python -m eval.cleanup_runs --agent vacation_planner_agent --run-source databricks --dry-runs-only --uc --yes
+python -m eval.cleanup_runs --agent vacation_planner_agent --run-source databricks --dry-runs-only --uc --traces --yes
 
 # fresh start for an agent: delete every run
-python -m eval.cleanup_runs --agent vacation_planner_agent --run-source databricks --all --uc --yes
+python -m eval.cleanup_runs --agent vacation_planner_agent --run-source databricks --all --uc --traces --yes
 ```
 
 Notes: the MLflow experiment itself is kept (a deleted experiment's name stays reserved in the trash);
 only its runs are removed, and deleted runs are soft-deleted until `mlflow gc`. For a complete local reset
-you can also delete `mlflow.db` and `mlruns/`. Traces stored in the UC trace tables are not removed by
-this tool. Only runs synced with `--sync-uc` exist in UC, so MLflow may show more runs than UC.
+you can also delete `mlflow.db` and `mlruns/`. Add `--traces` to also delete MLflow traces (and the UC-stored trace data behind them); without it
+traces are kept. Only runs synced with `--sync-uc` exist in UC, so MLflow may show more runs than UC.
 
 ## References
 
