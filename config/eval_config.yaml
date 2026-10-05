@@ -1,0 +1,56 @@
+# =============================================================================
+# Unity Catalog location for evaluation metrics, datasets, and traces.
+# =============================================================================
+# `catalog` / `schema` are the two values you provided (krishna / default).
+# A dedicated schema keeps eval tables out of the "default" catalog clutter;
+# change `schema` back to "default" if you'd rather keep everything together.
+unity_catalog:
+  catalog: krishna
+  schema: agent_eval        # set to "default" to use krishna.default instead
+  # Unity Catalog tables created by uc/setup_uc.py (see uc/ddl.sql)
+  tables:
+    runs: eval_runs
+    results: eval_results
+    scores_long: eval_scores_long
+    agent_registry: agent_registry
+  # Evaluation datasets (mlflow.genai.datasets) are stored as their own UC
+  # tables, one per agent, named "<catalog>.<schema>.<eval_dataset_table>"
+  # (eval_dataset_table comes from config/agents.yaml).
+
+# =============================================================================
+# MLflow experiment configuration
+# =============================================================================
+mlflow:
+  # Local development: traces/metrics are logged to a local SQLite-backed
+  # MLflow tracking store (mlflow.db) and a local file-based experiment.
+  local:
+    tracking_uri: "sqlite:///mlflow.db"
+    experiment_base_path: "/local/agent_eval"
+  # Databricks: traces are logged to a Databricks MLflow experiment with
+  # Unity Catalog-backed trace storage (set at runtime using the
+  # unity_catalog block above).
+  databricks:
+    tracking_uri: "databricks"
+    # Place each per-agent experiment directly under the existing /Shared
+    # workspace directory. Do not nest under /Shared/agent_eval: that path
+    # already names an experiment, and new intermediate directories may not
+    # exist in the workspace.
+    experiment_base_path: "/Shared"
+
+# =============================================================================
+# LLM judge model
+# =============================================================================
+# All scorers/judges pin an explicit model so behavior is identical whether
+# you run locally (sqlite tracking URI) or on Databricks (databricks tracking
+# URI). Without this, MLflow silently falls back to "openai:/gpt-4.1-mini"
+# (requiring OPENAI_API_KEY) whenever the tracking URI isn't "databricks".
+# Override with env var MLFLOW_JUDGE_MODEL if needed.
+judge_model: "databricks"
+
+# =============================================================================
+# Quality gates (used by CI / regression checks, see docs/RUNBOOK.md)
+# =============================================================================
+quality_gates:
+  min_pass_rate: 0.90          # overall scorer pass-rate required to not regress
+  max_p90_latency_ms: 6000     # p90 latency budget per request
+  max_avg_cost_usd: 0.02       # average $ cost per request budget

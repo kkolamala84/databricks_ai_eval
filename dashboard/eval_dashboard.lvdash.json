@@ -1,0 +1,627 @@
+{
+  "$schema": "https://databricks.com/lakeview/dashboard/v3",
+  "datasets": [
+    {
+      "name": "eval_runs_trend",
+      "displayName": "Eval Runs Trend",
+      "query": "SELECT run_id, agent_name, run_source, started_at, num_examples, overall_pass_rate, p50_latency_ms, p90_latency_ms, p99_latency_ms, avg_cost_usd, total_cost_usd, total_tokens FROM krishna.agent_eval.eval_runs ORDER BY started_at"
+    },
+    {
+      "name": "scorer_pass_rate_trend",
+      "displayName": "Scorer Pass-Rate Trend",
+      "query": "SELECT s.run_id, r.agent_name, r.started_at, s.scorer_name, COUNT(*) AS n, SUM(CASE WHEN s.pass_fail = 'pass' THEN 1 ELSE 0 END) / COUNT(*) AS pass_rate, AVG(s.numeric_value) AS avg_numeric_value FROM krishna.agent_eval.eval_scores_long s JOIN krishna.agent_eval.eval_runs r USING (run_id) WHERE s.pass_fail IS NOT NULL GROUP BY s.run_id, r.agent_name, r.started_at, s.scorer_name ORDER BY r.started_at, s.scorer_name"
+    },
+    {
+      "name": "category_breakdown_latest_run",
+      "displayName": "Tool-Coverage Category Breakdown (Latest Run)",
+      "query": "WITH latest_run AS (SELECT run_id FROM krishna.agent_eval.eval_runs ORDER BY started_at DESC LIMIT 1) SELECT e.category, COUNT(*) AS n_examples, SUM(CASE WHEN e.overall_pass THEN 1 ELSE 0 END) / COUNT(*) AS pass_rate, AVG(e.latency_ms) AS avg_latency_ms, AVG(e.estimated_cost_usd) AS avg_cost_usd FROM krishna.agent_eval.eval_results e JOIN latest_run USING (run_id) GROUP BY e.category ORDER BY pass_rate ASC"
+    },
+    {
+      "name": "failing_examples_latest_run",
+      "displayName": "Failing Examples (Latest Run)",
+      "query": "WITH latest_run AS (SELECT run_id FROM krishna.agent_eval.eval_runs ORDER BY started_at DESC LIMIT 1) SELECT e.example_id, e.category, e.request, e.response, e.latency_ms, e.estimated_cost_usd FROM krishna.agent_eval.eval_results e JOIN latest_run USING (run_id) WHERE e.overall_pass = FALSE ORDER BY e.category, e.example_id"
+    },
+    {
+      "name": "deviation_detection",
+      "displayName": "Deviation Detection vs. Rolling Baseline",
+      "query": "WITH ordered_runs AS (SELECT run_id, agent_name, started_at, overall_pass_rate, p90_latency_ms, avg_cost_usd, ROW_NUMBER() OVER (PARTITION BY agent_name ORDER BY started_at DESC) AS rn FROM krishna.agent_eval.eval_runs), baseline AS (SELECT agent_name, AVG(overall_pass_rate) AS baseline_pass_rate, STDDEV(overall_pass_rate) AS stddev_pass_rate, AVG(p90_latency_ms) AS baseline_p90_latency_ms, STDDEV(p90_latency_ms) AS stddev_p90_latency_ms, AVG(avg_cost_usd) AS baseline_avg_cost_usd, STDDEV(avg_cost_usd) AS stddev_avg_cost_usd FROM ordered_runs WHERE rn BETWEEN 2 AND 6 GROUP BY agent_name), latest AS (SELECT * FROM ordered_runs WHERE rn = 1) SELECT l.agent_name, l.started_at, l.overall_pass_rate, b.baseline_pass_rate, (l.overall_pass_rate - b.baseline_pass_rate) AS pass_rate_delta, l.p90_latency_ms, b.baseline_p90_latency_ms, (l.p90_latency_ms - b.baseline_p90_latency_ms) AS p90_latency_delta_ms, l.avg_cost_usd, b.baseline_avg_cost_usd, (l.avg_cost_usd - b.baseline_avg_cost_usd) AS avg_cost_delta_usd, CASE WHEN b.stddev_pass_rate > 0 AND ABS(l.overall_pass_rate - b.baseline_pass_rate) > 2 * b.stddev_pass_rate THEN TRUE ELSE FALSE END AS pass_rate_is_anomalous, CASE WHEN b.stddev_p90_latency_ms > 0 AND ABS(l.p90_latency_ms - b.baseline_p90_latency_ms) > 2 * b.stddev_p90_latency_ms THEN TRUE ELSE FALSE END AS latency_is_anomalous, CASE WHEN b.stddev_avg_cost_usd > 0 AND ABS(l.avg_cost_usd - b.baseline_avg_cost_usd) > 2 * b.stddev_avg_cost_usd THEN TRUE ELSE FALSE END AS cost_is_anomalous FROM latest l JOIN baseline b USING (agent_name)"
+    },
+    {
+      "name": "latest_run_summary",
+      "displayName": "Latest Run Summary",
+      "query": "SELECT run_id, agent_name, started_at, overall_pass_rate, p90_latency_ms, avg_cost_usd FROM krishna.agent_eval.eval_runs ORDER BY started_at DESC LIMIT 1"
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Agent Eval Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "latest_pass_rate_counter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_run_summary",
+                  "fields": [
+                    {
+                      "name": "overall_pass_rate",
+                      "expression": "`overall_pass_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "overall_pass_rate",
+                  "displayName": "Latest Pass Rate",
+                  "format": {
+                    "type": "number-percent"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Latest Pass Rate"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "latest_p90_latency_counter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_run_summary",
+                  "fields": [
+                    {
+                      "name": "p90_latency_ms",
+                      "expression": "`p90_latency_ms`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "p90_latency_ms",
+                  "displayName": "Latest P90 Latency (ms)",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Latest P90 Latency (ms)"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "latest_avg_cost_counter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_run_summary",
+                  "fields": [
+                    {
+                      "name": "avg_cost_usd",
+                      "expression": "`avg_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg_cost_usd",
+                  "displayName": "Latest Avg Cost (USD/request)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Latest Avg Cost (USD/request)"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "latency_trend_chart",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "eval_runs_trend",
+                  "fields": [
+                    {
+                      "name": "started_at",
+                      "expression": "`started_at`"
+                    },
+                    {
+                      "name": "p50_latency_ms",
+                      "expression": "`p50_latency_ms`"
+                    },
+                    {
+                      "name": "p90_latency_ms",
+                      "expression": "`p90_latency_ms`"
+                    },
+                    {
+                      "name": "p99_latency_ms",
+                      "expression": "`p99_latency_ms`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "started_at",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "started_at"
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "p50_latency_ms",
+                      "displayName": "p50_latency_ms"
+                    },
+                    {
+                      "fieldName": "p90_latency_ms",
+                      "displayName": "p90_latency_ms"
+                    },
+                    {
+                      "fieldName": "p99_latency_ms",
+                      "displayName": "p99_latency_ms"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Latency Percentiles Over Time"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "cost_trend_chart",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "eval_runs_trend",
+                  "fields": [
+                    {
+                      "name": "started_at",
+                      "expression": "`started_at`"
+                    },
+                    {
+                      "name": "total_cost_usd",
+                      "expression": "`total_cost_usd`"
+                    },
+                    {
+                      "name": "agent_name",
+                      "expression": "`agent_name`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "started_at",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "started_at"
+                },
+                "y": {
+                  "fieldName": "total_cost_usd",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "total_cost_usd"
+                },
+                "color": {
+                  "fieldName": "agent_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "agent_name"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Token Cost Over Time (USD)"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "scorer_pass_rate_chart",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "scorer_pass_rate_trend",
+                  "fields": [
+                    {
+                      "name": "started_at",
+                      "expression": "`started_at`"
+                    },
+                    {
+                      "name": "pass_rate",
+                      "expression": "`pass_rate`"
+                    },
+                    {
+                      "name": "scorer_name",
+                      "expression": "`scorer_name`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "started_at",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "started_at"
+                },
+                "y": {
+                  "fieldName": "pass_rate",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "pass_rate"
+                },
+                "color": {
+                  "fieldName": "scorer_name",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "scorer_name"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Scorer Pass Rate Over Time"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "category_breakdown_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "category_breakdown_latest_run",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "n_examples",
+                      "expression": "`n_examples`"
+                    },
+                    {
+                      "name": "pass_rate",
+                      "expression": "`pass_rate`"
+                    },
+                    {
+                      "name": "avg_latency_ms",
+                      "expression": "`avg_latency_ms`"
+                    },
+                    {
+                      "name": "avg_cost_usd",
+                      "expression": "`avg_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "category",
+                    "displayName": "category"
+                  },
+                  {
+                    "fieldName": "n_examples",
+                    "displayName": "n_examples"
+                  },
+                  {
+                    "fieldName": "pass_rate",
+                    "displayName": "pass_rate"
+                  },
+                  {
+                    "fieldName": "avg_latency_ms",
+                    "displayName": "avg_latency_ms"
+                  },
+                  {
+                    "fieldName": "avg_cost_usd",
+                    "displayName": "avg_cost_usd"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Category Breakdown (latest run)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "deviation_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "deviation_detection",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "expression": "`agent_name`"
+                    },
+                    {
+                      "name": "pass_rate_delta",
+                      "expression": "`pass_rate_delta`"
+                    },
+                    {
+                      "name": "p90_latency_delta_ms",
+                      "expression": "`p90_latency_delta_ms`"
+                    },
+                    {
+                      "name": "avg_cost_delta_usd",
+                      "expression": "`avg_cost_delta_usd`"
+                    },
+                    {
+                      "name": "pass_rate_is_anomalous",
+                      "expression": "`pass_rate_is_anomalous`"
+                    },
+                    {
+                      "name": "latency_is_anomalous",
+                      "expression": "`latency_is_anomalous`"
+                    },
+                    {
+                      "name": "cost_is_anomalous",
+                      "expression": "`cost_is_anomalous`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "agent_name",
+                    "displayName": "agent_name"
+                  },
+                  {
+                    "fieldName": "pass_rate_delta",
+                    "displayName": "pass_rate_delta"
+                  },
+                  {
+                    "fieldName": "p90_latency_delta_ms",
+                    "displayName": "p90_latency_delta_ms"
+                  },
+                  {
+                    "fieldName": "avg_cost_delta_usd",
+                    "displayName": "avg_cost_delta_usd"
+                  },
+                  {
+                    "fieldName": "pass_rate_is_anomalous",
+                    "displayName": "pass_rate_is_anomalous"
+                  },
+                  {
+                    "fieldName": "latency_is_anomalous",
+                    "displayName": "latency_is_anomalous"
+                  },
+                  {
+                    "fieldName": "cost_is_anomalous",
+                    "displayName": "cost_is_anomalous"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Deviation vs Baseline"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 10,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "failing_examples_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "failing_examples_latest_run",
+                  "fields": [
+                    {
+                      "name": "example_id",
+                      "expression": "`example_id`"
+                    },
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "request",
+                      "expression": "`request`"
+                    },
+                    {
+                      "name": "response",
+                      "expression": "`response`"
+                    },
+                    {
+                      "name": "latency_ms",
+                      "expression": "`latency_ms`"
+                    },
+                    {
+                      "name": "estimated_cost_usd",
+                      "expression": "`estimated_cost_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "example_id",
+                    "displayName": "example_id"
+                  },
+                  {
+                    "fieldName": "category",
+                    "displayName": "category"
+                  },
+                  {
+                    "fieldName": "request",
+                    "displayName": "request"
+                  },
+                  {
+                    "fieldName": "response",
+                    "displayName": "response"
+                  },
+                  {
+                    "fieldName": "latency_ms",
+                    "displayName": "latency_ms"
+                  },
+                  {
+                    "fieldName": "estimated_cost_usd",
+                    "displayName": "estimated_cost_usd"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Failing Examples (latest run)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 6,
+            "height": 4
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+# =============================================================================
+# Agent registry
+# -----------------------------------------------------------------------------
+# One entry per Databricks-served GenAI agent that this framework can evaluate.
+# Add new agents here (no code changes needed) to extend the framework to more
+# endpoints -- the eval runner, scorers, and dashboard are all agent-agnostic
+# and read this file to decide what to test and which dataset/scorers to use.
+# =============================================================================
+
+agents:
+  - name: vacation_planner_agent
+    description: >
+      LangGraph ReAct agent with two tools (get_current_weather,
+      get_vacation_suggestions) that answers travel-planning questions for
+      Paris, Dubai, Mumbai, and Hyderabad.
+    # Databricks Model Serving endpoint name (the part after /serving-endpoints/)
+    endpoint_name: vacation_planner_agent
+    # Full invocation URL. If omitted, it is derived from DATABRICKS_HOST +
+    # endpoint_name at runtime.
+    endpoint_url: https://dbc-08ff8153-2dcb.cloud.databricks.com/serving-endpoints/vacation_planner_agent/invocations
+    # Input schema the serving endpoint expects. "chat_messages" means the
+    # payload is {"messages": [{"role": "...", "content": "..."}]}.
+    input_schema: chat_messages
+    # Source file describing the agent's tools/prompt (for documentation /
+    # traceability only -- the framework calls the deployed endpoint, it does
+    # not re-import this module).
+    source_file: agents/vacation_planner_agent.py
+    # Static data backing the agent's tools. Scorers load this file directly
+    # so expected facts (weather-by-month, best/avoid months) always stay in
+    # sync with what the tools can actually return.
+    static_data_file: data/vacation_planner_data.json
+    # Logical tool names this agent can call. Used to build the tool-coverage
+    # evaluation dataset and to validate tool-selection scorers.
+    tools:
+      - get_current_weather
+      - get_vacation_suggestions
+    supported_locations: [paris, dubai, mumbai, hyderabad]
+    # Name of the eval dataset (Unity Catalog table) used for this agent.
+    eval_dataset_table: vacation_planner_eval_set
+    # Approx. $ per 1M tokens for the LLM endpoint behind this agent. Used by
+    # the cost scorer when trace-level cost isn't available from MLflow/UC.
+    # Update to match the actual model serving the agent (see LLM_ENDPOINT in
+    # the agent source). Defaults assume a Llama/DBRX-class Databricks
+    # Foundation Model endpoint.
+    pricing:
+      input_usd_per_1m_tokens: 1.00
+      output_usd_per_1m_tokens: 3.00
+
+# Add more agents below following the same shape, e.g.:
+# - name: another_agent
+#   endpoint_name: another_agent
+#   ...

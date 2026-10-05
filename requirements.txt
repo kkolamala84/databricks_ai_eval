@@ -1,0 +1,51 @@
+# =============================================================================
+# Core dependencies for the Databricks AI agent evaluation framework.
+# Install with:  pip install -r requirements.txt
+# =============================================================================
+
+# MLflow GenAI evaluation, tracing, scorers (Correctness/Safety/Guidelines/...),
+# make_judge(), mlflow.genai.datasets (Unity Catalog-backed eval datasets), and
+# the Databricks auth/tracking integration ("databricks" tracking URI).
+# >=3.14.0 is required for mlflow.genai.datasets + code-based scorer patterns
+# used in scorers/ (see Databricks docs prerequisites).
+mlflow[databricks]>=3.14.0
+
+# Config loading (config/agents.yaml, config/eval_config.yaml)
+PyYAML>=6.0
+
+# Dataset / results handling
+pandas>=2.0
+
+# REST calls to the Databricks Model Serving agent endpoint
+# (eval/agent_client.py)
+requests>=2.31
+
+# Local .env file support for DATABRICKS_HOST / DATABRICKS_TOKEN / etc.
+python-dotenv>=1.0
+
+# Token-count estimation fallback when the serving endpoint response doesn't
+# report usage and no MLflow trace-level token usage is available
+# (scorers/cost_scorers.py, eval/agent_client.py).
+tiktoken>=0.7
+
+# Writes evaluation results to Unity Catalog tables from a local machine via
+# a SQL warehouse (eval/uc_sync.py, uc/setup_uc.py). Not needed when running
+# inside a Databricks notebook/job, where a Spark session is used instead.
+databricks-sql-connector>=3.0
+
+# -----------------------------------------------------------------------------
+# Optional: only needed if you want uc/setup_uc.py's Spark code path to work
+# from a local machine (e.g. via Databricks Connect serverless compute)
+# instead of the SQL-warehouse path above. Not required for the default
+# local workflow described in docs/RUNBOOK.md.
+# -----------------------------------------------------------------------------
+# databricks-connect>=15.4
+
+# -----------------------------------------------------------------------------
+# Already bundled with the agent's own dependencies (installed on the
+# Databricks cluster/notebook that builds & deploys the agent). Listed here
+# only for reference -- NOT required to run this evaluation framework, since
+# the framework calls the deployed serving endpoint over REST rather than
+# importing the agent code:
+#   langchain-core, langgraph, databricks-langchain
+# -----------------------------------------------------------------------------

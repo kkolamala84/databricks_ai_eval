@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Local MLflow tracking store + artifacts
+mlflow.db
+mlruns/
+mlartifacts/
+
+# OS / editor
+.DS_Store

@@ -1,0 +1,86 @@
+{
+    "weather_data": {
+        "paris": {
+            "1": "Cold and rainy (avg 7C/45F)",
+            "2": "Cold with occasional sunshine (avg 8C/46F)",
+            "3": "Mild and partly cloudy (avg 11C/52F)",
+            "4": "Mild and pleasant (avg 15C/59F)",
+            "5": "Warm and sunny (avg 19C/66F)",
+            "6": "Warm and sunny (avg 22C/72F)",
+            "7": "Hot and sunny (avg 25C/77F)",
+            "8": "Hot and sunny (avg 24C/75F)",
+            "9": "Warm and pleasant (avg 21C/70F)",
+            "10": "Mild and rainy (avg 16C/61F)",
+            "11": "Cold and rainy (avg 10C/50F)",
+            "12": "Cold and foggy (avg 7C/45F)"
+        },
+        "dubai": {
+            "1": "Pleasant and sunny (avg 20C/68F)",
+            "2": "Warm and sunny (avg 21C/70F)",
+            "3": "Warm and sunny (avg 24C/75F)",
+            "4": "Hot and sunny (avg 29C/84F)",
+            "5": "Very hot and humid (avg 35C/95F)",
+            "6": "Extremely hot and humid (avg 38C/100F)",
+            "7": "Extremely hot and humid (avg 41C/106F)",
+            "8": "Extremely hot and humid (avg 40C/104F)",
+            "9": "Very hot and humid (avg 37C/99F)",
+            "10": "Hot and sunny (avg 32C/90F)",
+            "11": "Warm and pleasant (avg 26C/79F)",
+            "12": "Pleasant and sunny (avg 22C/72F)"
+        },
+        "mumbai": {
+            "1": "Pleasant and sunny (avg 24C/75F)",
+            "2": "Pleasant and sunny (avg 25C/77F)",
+            "3": "Warm and sunny (avg 28C/82F)",
+            "4": "Hot and humid (avg 31C/88F)",
+            "5": "Very hot and humid (avg 33C/91F)",
+            "6": "Monsoon with heavy rain (avg 29C/84F)",
+            "7": "Monsoon with heavy rain (avg 28C/82F)",
+            "8": "Monsoon with heavy rain (avg 28C/82F)",
+            "9": "Post-monsoon and cloudy (avg 29C/84F)",
+            "10": "Warm and partly cloudy (avg 31C/88F)",
+            "11": "Pleasant and sunny (avg 28C/82F)",
+            "12": "Pleasant and sunny (avg 25C/77F)"
+        },
+        "hyderabad": {
+            "1": "Pleasant and sunny (avg 22C/72F)",
+            "2": "Warm and sunny (avg 25C/77F)",
+            "3": "Hot and dry (avg 30C/86F)",
+            "4": "Very hot and dry (avg 35C/95F)",
+            "5": "Very hot and dry (avg 38C/100F)",
+            "6": "Hot with monsoon onset (avg 33C/91F)",
+            "7": "Warm and rainy (avg 27C/81F)",
+            "8": "Warm and rainy (avg 27C/81F)",
+            "9": "Post-monsoon and cloudy (avg 28C/82F)",
+            "10": "Warm and pleasant (avg 28C/82F)",
+            "11": "Pleasant and sunny (avg 24C/75F)",
+            "12": "Pleasant and sunny (avg 21C/70F)"
+        }
+    },
+    "vacation_data": {
+        "paris": {
+            "best_months": [4, 5, 6, 9],
+            "description": "April to June offers pleasant weather, blooming gardens, and a lively cultural scene. September is warm with smaller crowds and a charming harvest atmosphere.",
+            "avoid_months": [11, 12, 1],
+            "avoid_reason": "Winter is cold, grey, and rainy with limited outdoor activities."
+        },
+        "dubai": {
+            "best_months": [11, 12, 1, 2, 3],
+            "description": "November through March brings mild temperatures perfect for beaches, desert safaris, and outdoor dining.",
+            "avoid_months": [6, 7, 8, 9],
+            "avoid_reason": "Summer (June-September) is extremely hot (40C+) and humid, making outdoor activities very uncomfortable."
+        },
+        "mumbai": {
+            "best_months": [11, 12, 1, 2],
+            "description": "November to February offers cool, dry weather ideal for exploring the city, beaches, and the vibrant street food scene.",
+            "avoid_months": [6, 7, 8],
+            "avoid_reason": "Monsoon season (June-August) brings heavy flooding and major travel disruptions."
+        },
+        "hyderabad": {
+            "best_months": [10, 11, 12, 1, 2],
+            "description": "October to February is the most comfortable time to explore historic sites, the old city, and the legendary Hyderabadi cuisine.",
+            "avoid_months": [4, 5],
+            "avoid_reason": "April and May are extremely hot (38-42C), making outdoor sightseeing very uncomfortable."
+        }
+    }
+}
